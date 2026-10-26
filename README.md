@@ -44,12 +44,12 @@ explain a large diff back to it.
 ## Install
 
 ```sh
-claude plugin marketplace add <owner>/<repo>
+claude plugin marketplace add Tevv01/se-mentor
 claude plugin install se-mentor@se-learning
 ```
 
 `se-learning` is the name of the marketplace this repo provides, and `se-mentor` is the
-plugin inside it. You can also run `/plugin marketplace add <owner>/<repo>` inside a
+plugin inside it. You can also run `/plugin marketplace add Tevv01/se-mentor` inside a
 session. The plugin loads in your next session.
 
 Then set it up, which takes about 5 minutes:
@@ -99,7 +99,8 @@ drills and what to measure. The plugin ships with eleven:
 | `requirements-and-estimation` | Turning vague requests into clear, sliced, estimated work |
 
 **Stack packs** describe your stack: tooling, idioms, common pitfalls (especially in
-agent-written code) and good open-source repos for reading practice. None ship yet. Run
+agent-written code) and good open-source repos for reading practice. One ships so far:
+`dotnet` (C#, ASP.NET Core, EF Core). For any other stack, run
 `/se-mentor:extend stack <name>` and it writes one with you, checking the practice repos
 it suggests.
 
@@ -180,7 +181,7 @@ gone.
   testing, but it is still a model following instructions.
 - Drills are built and graded by Claude. The answer key is fixed before you start, which
   keeps grading honest, but the quality of the material depends on the model.
-- No stack packs ship yet (see above).
+- Only one stack pack (`dotnet`) ships so far. Others are a good first contribution.
 
 ## Contributing
 

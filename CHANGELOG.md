@@ -17,4 +17,5 @@ First release.
 - A SessionStart hook that injects the learner's profile and friction checks.
 - Learner state in `~/.se-mentor/`: profile, skills matrix, journal, spaced-repetition
   review queue, and drill scratch projects with answer keys.
-- Stack pack template. No built-in stack packs yet.
+- Stack pack template, and a built-in `dotnet` stack pack (C#, ASP.NET Core, EF Core).
+- Plugin icon.

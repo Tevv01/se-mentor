@@ -4,5 +4,7 @@
   "version": "0.1.0",
   "author": { "name": "Vetle Olavesen" },
   "license": "MIT",
+  "homepage": "https://github.com/Tevv01/se-mentor",
+  "repository": "https://github.com/Tevv01/se-mentor",
   "keywords": ["learning", "mentoring", "software-engineering", "deliberate-practice", "code-review", "testing"]
 }
