@@ -12,13 +12,16 @@ your real `~/.se-mentor` stays untouched:
 
 ```sh
 # macOS / Linux
-SE_MENTOR_HOME=/tmp/se-mentor-dev claude --plugin-dir ./plugins/se-mentor
+export SE_MENTOR_HOME=/tmp/se-mentor-dev
+claude --plugin-dir ./plugins/se-mentor
 
 # Windows PowerShell
-$env:SE_MENTOR_HOME = "$env:TEMP\se-mentor-dev"; claude --plugin-dir ./plugins/se-mentor
+$env:SE_MENTOR_HOME = "$env:TEMP\se-mentor-dev"
+claude --plugin-dir ./plugins/se-mentor
 ```
 
-Run `/reload-plugins` after editing. The helper script can be run directly too:
+Run `/reload-plugins` after editing. In the same shell, so `SE_MENTOR_HOME` still points at
+the throwaway folder, you can also run the helper script directly:
 
 ```sh
 node plugins/se-mentor/scripts/mentor.js status

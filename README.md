@@ -37,7 +37,8 @@ explain a large diff back to it.
 
 ## Requirements
 
-- [Claude Code](https://code.claude.com) with plugin support
+- [Claude Code](https://code.claude.com) 2.1.296 or newer (the version it was tested
+  with)
 - [Node.js](https://nodejs.org) 18 or newer on your `PATH`. The hook and the skills run a
   small dependency-free script. Claude Code's native installer doesn't include Node.
 
@@ -49,8 +50,9 @@ claude plugin install se-mentor@se-learning
 ```
 
 `se-learning` is the name of the marketplace this repo provides, and `se-mentor` is the
-plugin inside it. You can also run `/plugin marketplace add Tevv01/se-mentor` inside a
-session. The plugin loads in your next session.
+plugin inside it. Inside a session, the same two steps are
+`/plugin marketplace add Tevv01/se-mentor` and `/plugin install se-mentor@se-learning`.
+The plugin loads in your next session.
 
 Then set it up, which takes about 5 minutes:
 
@@ -130,8 +132,9 @@ built-in ones with the same name, so you can tailor anything without forking.
   modules, and the paths to your state files. The only file it may write is
   `review-queue.json`, to fill in scheduling fields on new review items.
 - **Once you're set up, it changes Claude's behavior in every repo**, according to your
-  friction level. Turn that off with `/se-mentor:setup friction off`. To pause the plugin
-  entirely, run `claude plugin disable se-mentor@se-learning`.
+  friction level. `/se-mentor:setup friction off` turns the checks off. The hook still adds
+  a few lines per session, such as a one-time reminder when reviews are due. To silence it
+  completely, run `claude plugin disable se-mentor@se-learning`.
 - **Skills write only to your state folder.** The exception is `plan-with-me` and
   `understand-diff`, which change code in your repo only when you ask them to implement
   something. Drills build scratch projects in `~/.se-mentor/gym/`, and ask before cloning

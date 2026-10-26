@@ -5,23 +5,26 @@ description: C# on modern .NET (8 and 10). ASP.NET Core Web APIs, Entity Framewo
 
 # .NET (C#, ASP.NET Core, EF Core)
 
-.NET 10 is the current LTS release. .NET 8 is the previous LTS and is still common in
-client codebases (its support ends in November 2026). Check the target framework in the
-`.csproj` files before trusting any API an agent suggests.
+.NET 10 is the current LTS release. .NET 8 is still common in client codebases, but its
+support ends on 10 November 2026, so projects on it need an upgrade plan. Check the
+target framework in the `.csproj` files before trusting any API an agent suggests.
 
 ## Tooling and commands
 
 - Build, run, watch: `dotnet build`, `dotnet run --project src/<Api>`, `dotnet watch`.
 - Test: `dotnet test`. To run a single test or class:
   `dotnet test --filter "FullyQualifiedName~OrderTests"`. For verbose output, add
-  `--logger "console;verbosity=detailed"`.
+  `--logger "console;verbosity=detailed"`. These flags are for the classic VSTest runner.
+  If `global.json` opts into Microsoft.Testing.Platform, filters are framework-specific
+  (e.g. xUnit v3 `--filter-class`).
 - Format and analyzers: `dotnet format`. Treat compiler warnings as findings,
   especially nullable warnings (`CS86xx`).
-- Dependencies: `dotnet list package --outdated` and `dotnet list package --vulnerable`.
+- Dependencies: `dotnet list package --outdated` and
+  `dotnet list package --vulnerable --include-transitive`.
   Central versions live in `Directory.Packages.props` when the solution uses it.
 - EF Core migrations (needs the `dotnet-ef` tool): `dotnet ef migrations add <Name>`,
-  `dotnet ef database update`, and `dotnet ef migrations script --idempotent`, which shows
-  the SQL a migration will run.
+  `dotnet ef database update`, and `dotnet ef migrations script <PreviousMigration>`,
+  which shows the SQL the new migrations will run.
 - Secrets for local development: `dotnet user-secrets set "Key" "value"`, never
   `appsettings.json`.
 - Debugging: use the IDE debugger (Rider, Visual Studio, or VS Code with C# Dev Kit), and
@@ -37,8 +40,9 @@ client codebases (its support ends in November 2026). Check the target framework
   Middleware order matters (exception handling, then auth, then endpoints).
 - **Dependency injection lifetimes**: singleton, scoped (one per request) and transient.
   `DbContext` is scoped. Never inject a scoped service into a singleton.
-- **Configuration**: `appsettings.json`, `appsettings.{Environment}.json`, environment
-  variables and user secrets, in increasing precedence. Bind settings to classes with the
+- **Configuration**: `appsettings.json`, `appsettings.{Environment}.json`, user secrets
+  (Development only), environment variables, then command-line arguments, in increasing
+  precedence. Bind settings to classes with the
   options pattern (`IOptions<T>`) and validate them at startup.
 - **Async all the way**: `async`/`await` end to end, with a `CancellationToken` passed
   through to EF Core and `HttpClient` calls.
@@ -69,11 +73,14 @@ client codebases (its support ends in November 2026). Check the target framework
 These show up often in agent-written .NET code:
 - Sync over async (`.Result`, `.Wait()`), and `async void` outside event handlers.
 - A scoped service captured by a singleton, which hides bugs until two requests run at
-  once.
+  once. Similarly, one `DbContext` shared across `Task.WhenAll` throws, because a
+  `DbContext` is not thread-safe. A `BackgroundService` must create a scope with
+  `IServiceScopeFactory` to use one.
 - N+1 queries from lazy loading or a missing `Include`, and filtering in memory after
   `ToList()` instead of in SQL.
-- `FromSqlRaw` with string interpolation, which allows SQL injection. Use
-  `FromSqlInterpolated` or parameters.
+- `FromSqlRaw` or `ExecuteSqlRaw` with string interpolation, which allows SQL
+  injection. Use `FromSql($"...")` (EF Core 7+), which parameterizes, or explicit
+  parameters.
 - `new HttpClient()` per call, instead of `IHttpClientFactory` or typed clients.
 - `catch (Exception) { }` and other swallowed errors, or logging the same error at every
   layer.
@@ -86,20 +93,31 @@ These show up often in agent-written .NET code:
 - A migration that nobody reviewed. Read the generated SQL for drops and renames.
 - A new endpoint without `[Authorize]` or a policy, when the app has no fallback
   authorization policy.
+- No record-level check: `db.Orders.FindAsync(id)` lets user A read user B's order.
+  Filter by owner in the query (`Where(o => o.Id == id && o.UserId == userId)`), or use
+  resource-based authorization (`IAuthorizationService.AuthorizeAsync`).
+- Assuming DataAnnotations are enforced. Only `[ApiController]` controllers return 400
+  automatically. Minimal APIs need `builder.Services.AddValidation()` (.NET 10), or explicit
+  validation.
 - Binding request bodies straight to EF entities (mass assignment).
 
 ## Practice repos
 
-These target .NET 9 or 10. When your project is on .NET 8, read them for structure, but
-don't copy newer APIs.
+These target .NET 10. When your project is on .NET 8, read them for structure, but don't
+copy newer APIs.
 
 - **ardalis/CleanArchitecture** (https://github.com/ardalis/CleanArchitecture): a widely
-  used Clean Architecture template with integration tests on Testcontainers. Trace:
+  used Clean Architecture template. Its functional tests use WebApplicationFactory with
+  Testcontainers (falling back to SQLite without Docker). Its integration tests use the EF
+  InMemory provider. Trace:
   - how a create request goes from the endpoint through the use case to persistence
   - where validation happens, and what the client sees when it fails
-  - how the integration tests start the app and set up the database
+  - how the functional tests start the app and the database, and what the InMemory-based
+    tests could miss
 - **jasontaylordev/CleanArchitecture** (https://github.com/jasontaylordev/CleanArchitecture):
-  Clean Architecture with MediatR, NUnit and a choice of databases. Trace:
+  Clean Architecture with MediatR, NUnit and a choice of databases. Recent MediatR
+  versions need a commercial license, so check before adopting the pattern in client
+  code. Trace:
   - a command through the MediatR pipeline behaviours (validation, logging,
     authorization)
   - how EF Core entity configurations are found and applied
@@ -131,13 +149,17 @@ frames, so skip down to the first frame in your own namespace.
 
 ### data-modeling
 See the SQL EF generates with `query.ToQueryString()`, or by enabling EF command logging.
-Set the precision of money columns explicitly, e.g. `HasPrecision(18, 2)`. Use a
-concurrency token (`[Timestamp]` or rowversion) when two users can edit the same row.
+Set the precision of money columns explicitly, e.g. `HasPrecision(18, 2)`. When two users
+can edit the same row, use a concurrency token (`[Timestamp]` rowversion on SQL Server,
+`xmin` on PostgreSQL) and handle `DbUpdateConcurrencyException`. SQLite can't sort or
+aggregate `decimal` in SQL, so test money queries against your real database.
 
 ### security-fundamentals
-Set a fallback authorization policy so new endpoints are protected by default. Keep
+Set a fallback authorization policy so new endpoints are protected by default. It only
+proves the caller is logged in, so also check record ownership on every data access (see
+Common pitfalls). Keep
 secrets in user secrets locally and in a vault in production. Run
-`dotnet list package --vulnerable` in CI.
+`dotnet list package --vulnerable --include-transitive` in CI.
 
 ### owning-agent-features
 Before accepting an agent's .NET diff, check four things:
