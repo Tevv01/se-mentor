@@ -50,8 +50,8 @@ target framework in the `.csproj` files before trusting any API an agent suggest
   doesn't fix anything.
 - **Errors**: return ProblemDetails for API errors, with one central exception handler.
   Don't add try/catch in every endpoint.
-- **Logging**: `ILogger<T>` with message templates (`"Order {OrderId} failed"`), not string
-  interpolation, so the fields stay structured.
+- **Logging**: `ILogger<T>` with message templates (`"Order {OrderId} failed"`), not
+  string interpolation, so the fields stay structured.
 - **EF Core reads**: project to DTOs with `Select`, use `AsNoTracking()` for read-only
   queries, and use `Include` only for what you need.
 
@@ -97,8 +97,8 @@ These show up often in agent-written .NET code:
   Filter by owner in the query (`Where(o => o.Id == id && o.UserId == userId)`), or use
   resource-based authorization (`IAuthorizationService.AuthorizeAsync`).
 - Assuming DataAnnotations are enforced. Only `[ApiController]` controllers return 400
-  automatically. Minimal APIs need `builder.Services.AddValidation()` (.NET 10), or explicit
-  validation.
+  automatically. Minimal APIs need `builder.Services.AddValidation()` (.NET 10), or
+  explicit validation.
 - Binding request bodies straight to EF entities (mass assignment).
 
 ## Practice repos
@@ -114,10 +114,10 @@ copy newer APIs.
   - where validation happens, and what the client sees when it fails
   - how the functional tests start the app and the database, and what the InMemory-based
     tests could miss
-- **jasontaylordev/CleanArchitecture** (https://github.com/jasontaylordev/CleanArchitecture):
-  Clean Architecture with MediatR, NUnit and a choice of databases. Recent MediatR
-  versions need a commercial license, so check before adopting the pattern in client
-  code. Trace:
+- **jasontaylordev/CleanArchitecture**
+  (https://github.com/jasontaylordev/CleanArchitecture): Clean Architecture with
+  MediatR, NUnit and a choice of databases. Recent MediatR versions need a commercial
+  license, so check before adopting the pattern in client code. Trace:
   - a command through the MediatR pipeline behaviours (validation, logging,
     authorization)
   - how EF Core entity configurations are found and applied

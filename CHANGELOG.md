@@ -3,6 +3,14 @@
 All notable changes to se-mentor are listed here. Versions follow
 `plugins/se-mentor/.claude-plugin/plugin.json`.
 
+## 0.2.0 - 2026-10-26
+
+- Five new built-in stack packs: `jvm-spring` (Java and Kotlin with Spring Boot),
+  `typescript-node`, `react-typescript`, `python-web` (FastAPI and Django) and `go`.
+  Versions, support dates and practice repos were checked against official sources as of
+  this date.
+- `/se-mentor:setup` lists the available stack packs before asking which you use.
+
 ## 0.1.1 - 2026-10-26
 
 - Built-in `dotnet` stack pack (C#, ASP.NET Core, EF Core), reviewed for accuracy.

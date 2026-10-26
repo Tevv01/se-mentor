@@ -101,10 +101,20 @@ drills and what to measure. The plugin ships with eleven:
 | `requirements-and-estimation` | Turning vague requests into clear, sliced, estimated work |
 
 **Stack packs** describe your stack: tooling, idioms, common pitfalls (especially in
-agent-written code) and good open-source repos for reading practice. One ships so far:
-`dotnet` (C#, ASP.NET Core, EF Core). For any other stack, run
-`/se-mentor:extend stack <name>` and it writes one with you, checking the practice repos
-it suggests.
+agent-written code) and good open-source repos for reading practice. These ship with the
+plugin:
+
+| Stack pack | Covers |
+|---|---|
+| `dotnet` | C#, ASP.NET Core Web APIs, Entity Framework Core |
+| `jvm-spring` | Java and Kotlin with Spring Boot, Spring Data JPA |
+| `typescript-node` | TypeScript backends on Node.js: Express, Fastify, NestJS, Prisma and friends |
+| `react-typescript` | React frontends in TypeScript: Vite or Next.js, TanStack Query, Playwright |
+| `python-web` | FastAPI and Django (with DRF), SQLAlchemy, pytest |
+| `go` | Go services: net/http, database/sql, pgx or sqlc |
+
+For any other stack, run `/se-mentor:extend stack <name>` and it writes one with you,
+checking the practice repos it suggests.
 
 **Friction level** sets how much se-mentor slows you down during normal work:
 
@@ -184,7 +194,8 @@ gone.
   testing, but it is still a model following instructions.
 - Drills are built and graded by Claude. The answer key is fixed before you start, which
   keeps grading honest, but the quality of the material depends on the model.
-- Only one stack pack (`dotnet`) ships so far. Others are a good first contribution.
+- Stack packs record versions and practice repos as of their last update (see
+  CHANGELOG.md). Fast-moving stacks date quickly, so corrections are welcome.
 
 ## Contributing
 

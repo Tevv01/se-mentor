@@ -1,6 +1,6 @@
 ---
 name: extend
-description: Create a new se-mentor focus module or stack pack from the template, e.g. "/se-mentor:extend module testing" or "/se-mentor:extend stack dotnet".
+description: Create a new se-mentor focus module or stack pack from the template, e.g. "/se-mentor:extend module performance" or "/se-mentor:extend stack rails".
 argument-hint: "module <name> | stack <name>"
 disable-model-invocation: true
 ---

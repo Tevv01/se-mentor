@@ -42,8 +42,11 @@ Go one topic at a time. Use AskUserQuestion for choices of 2-4 options. List lon
 1. **About you**: role, experience, the kind of work you do, and 1-3 goals for the next
    3-12 months. Write a one-line `about` and the goals **without client, company or
    project names**. They are injected into every session.
-2. **Stack**: what you use day to day. Match each item to an entry in `stacks` from the
-   status output. For a stack with no pack, offer to create one now by following
+2. **Stack**: list the available `stacks` from the status output (name and description),
+   then ask which ones they use day to day, or expect to use. Match each answer to a pack
+   name ("Spring" is `jvm-spring`, "Next.js" is `react-typescript`); anything with no
+   match is a stack with no pack. For a stack with no pack,
+   offer to create one now by following
    `${CLAUDE_PLUGIN_ROOT}/skills/extend/SKILL.md` inline (skip its profile step; you
    write the profile at the end), or to do it later with `/se-mentor:extend stack <name>`.
 3. **Focus modules**: list the available `modules` with their descriptions. Ask which
