@@ -27,7 +27,10 @@ You ask Claude to review a change before you commit it:
   3. What is the one thing most likely to be wrong? (It handles money.)
 ```
 
-After you answer, it sends you to the 2-3 riskiest lines with one question each. It
+After you answer, it opens a map of the change in your browser: changed files grouped by
+module, coloured by risk (contract, data, security, dependency, config, tests), with the
+connections the diff adds or removes. You say what surprised you before it adds
+anything. Then it sends you to the 2-3 riskiest lines with one question each. It
 checks your answers against the code and asks you to explain the change back. Then it
 tells you honestly which parts you haven't read. You decide whether to accept.
 
@@ -70,7 +73,8 @@ how much friction you want. It writes your profile to `~/.se-mentor/`.
 | `/se-mentor:setup [change]` | Create your profile, or change one setting: `friction light`, `add focus debugging` |
 | `/se-mentor:drill [module] [drill]` | A time-boxed practice drill in a scratch project, graded against a rubric written before you start, with a second rep right after. Updates your skills matrix |
 | `/se-mentor:plan-with-me <feature>` | Build a feature as its owner: you restate it, break it down and make the design calls; the agent implements one step at a time |
-| `/se-mentor:understand-diff [target]` | Before you accept a diff: predict it, read the riskiest spots, explain it back |
+| `/se-mentor:understand-diff [target]` | Before you accept a diff: predict it, compare with a visual map of the change, read the riskiest spots, explain it back |
+| `/se-mentor:understand-diff map [target]` | Just the visual map of a diff, after a one-line guess |
 | `/se-mentor:review [n]` | Spaced-repetition questions built from your own mistakes |
 | `/se-mentor:retro [week]` | A session retro, or a weekly review against your goals |
 | `/se-mentor:extend module\|stack <name>` | Write a new focus module or stack pack with you |
@@ -145,11 +149,16 @@ built-in ones with the same name, so you can tailor anything without forking.
   friction level. `/se-mentor:setup friction off` turns the checks off. The hook still adds
   a few lines per session, such as a one-time reminder when reviews are due. To silence it
   completely, run `claude plugin disable se-mentor@se-learning`.
-- **Skills write only to your state folder.** The exception is `plan-with-me` and
+- **Skills write only to your state folder** (and diff maps to your temp folder, below).
+  The exception is `plan-with-me` and
   `understand-diff`, which change code in your repo only when you ask them to implement
   something. Drills build scratch projects in `~/.se-mentor/gym/`, and ask before cloning
   any open-source practice repo there.
-- The plugin's script makes no network calls. Claude uses the network only when a skill
+- **Diff maps** are written to a private `se-mentor-maps` folder in your system temp folder (never to
+  your state folder, since they name work files) and opened in your browser. The page
+  loads the Mermaid renderer from the jsDelivr CDN. If that's blocked, it shows the
+  diagram source and Claude can draw the map in the terminal instead.
+- The plugin's scripts make no network calls. Claude uses the network only when a skill
   needs it: `understand-diff PR <n>` runs `gh pr diff`, a drill clones a practice repo
   (after asking), and `/se-mentor:extend` checks practice repos on the web.
 

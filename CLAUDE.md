@@ -15,6 +15,8 @@ plugins/se-mentor/
   config/friction.json              checks, levels, params (data, not code)
   hooks/hooks.json                  SessionStart -> scripts/mentor.js session-start
   scripts/mentor.js                 state/catalog/friction/review-queue helper (Node built-ins only)
+  scripts/diffmap.js                diff facts (files, modules, risk tags, imports) and map rendering
+  reference/diff-map.md             how understand-diff draws diff maps (views, colours, evidence rule)
   reference/skill-rules.md          rules every skill follows (profile check, opt-out, confidentiality)
   reference/state-formats.md        journal, review-queue, skills-matrix and drill-file formats
   skills/<name>/SKILL.md            the engine: setup, extend, drill, plan-with-me,
@@ -57,8 +59,13 @@ on uninstall.
 - **Skills don't explain first.** Every learning skill makes the learner predict, plan or
   answer before the agent explains. A change that makes a skill summarize up front breaks
   its purpose.
-- `mentor.js` must never throw or exit non-zero: skills inject its output with
-  `!` commands, and a failure aborts the skill. Keep it dependency-free.
+- `mentor.js` and `diffmap.js` must never throw or exit non-zero: skills inject
+  `mentor.js` output with `!` commands, where a failure aborts the skill, and Claude reads
+  both scripts' JSON output, so errors must come back as JSON. Keep them dependency-free.
+- **Pictures come after predictions, and from facts.** Diff maps are drawn from
+  `diffmap.js facts` and show only arrows backed by file:line evidence. They are shown
+  after the learner predicts, never instead of it. Maps live in the OS temp dir, never in
+  the learner state dir.
 
 ## Developing
 

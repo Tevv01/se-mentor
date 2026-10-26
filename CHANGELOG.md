@@ -3,6 +3,19 @@
 All notable changes to se-mentor are listed here. Versions follow
 `plugins/se-mentor/.claude-plugin/plugin.json`.
 
+## 0.3.0 - 2026-10-26
+
+- Visual diff maps in `/se-mentor:understand-diff`. After your prediction, a map of the
+  change opens in your browser:
+  - a change map: files grouped by module, coloured by risk, with test markers
+  - a before/after structure view, when dependencies change
+  - a flow view, on request
+  You compare it with your prediction before Claude adds anything.
+- `/se-mentor:understand-diff map [target]` gives just the map.
+- New `scripts/diffmap.js` extracts diff facts deterministically (files, modules, risk
+  tags, added or removed imports, matching test changes) and renders the HTML page.
+  Claude draws an arrow only when it can cite file:line evidence for it.
+
 ## 0.2.0 - 2026-10-26
 
 - Five new built-in stack packs: `jvm-spring` (Java and Kotlin with Spring Boot),

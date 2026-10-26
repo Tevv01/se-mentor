@@ -1,7 +1,7 @@
 ---
 name: understand-diff
-description: Understand a diff before you accept or approve it, whether it's the agent's, a colleague's or your own. You predict, read the riskiest spots, and explain it back.
-argument-hint: "[staged | <branch> | <commit> | <commit>..<commit> | PR <number>]  (default: uncommitted changes)"
+description: Understand a diff before you accept or approve it, whether it's the agent's, a colleague's or your own. You predict, compare with a visual map of the change, read the riskiest spots, and explain it back. "map" gives just the picture.
+argument-hint: "[map] [staged | <branch> | <commit> | <commit>..<commit> | PR <number>]  (default: uncommitted changes)"
 disable-model-invocation: true
 ---
 
@@ -10,7 +10,8 @@ disable-model-invocation: true
 The learner is about to accept, commit or approve a change. Get them to real
 understanding fast by sending them to the parts that matter, not by summarizing
 everything. Don't explain the diff up front: that is the backseat habit this skill exists
-to break.
+to break. The map is a tool for checking their own picture of the change, not a
+replacement for forming one.
 
 ## State
 
@@ -18,10 +19,14 @@ to break.
 node "${CLAUDE_PLUGIN_ROOT}/scripts/mentor.js" status
 ```
 
-Target: $ARGUMENTS
+Request: $ARGUMENTS
 
-First read `${CLAUDE_PLUGIN_ROOT}/reference/skill-rules.md` and
-`${CLAUDE_PLUGIN_ROOT}/reference/state-formats.md`, and follow them.
+First read `${CLAUDE_PLUGIN_ROOT}/reference/skill-rules.md`,
+`${CLAUDE_PLUGIN_ROOT}/reference/state-formats.md` and
+`${CLAUDE_PLUGIN_ROOT}/reference/diff-map.md`, and follow them.
+
+If the request starts with `map`, this is **map mode**: run steps 1-3 only, then stop
+(see the end of step 3). The rest of the request is the target.
 
 Find the learner's level for `reading-unfamiliar-code` in `skillsMatrix` (assume 2 if it
 is missing). Levels 1-2 get specific questions with a pointer to the exact lines. Levels
@@ -29,48 +34,72 @@ is missing). Levels 1-2 get specific questions with a pointer to the exact lines
 
 ## 1. Get the diff
 
-Resolve the target:
-- Empty → uncommitted changes (`git diff HEAD`, plus untracked files from
-  `git status --porcelain`). In a repo with no commits yet, use `git diff --cached` and
-  the untracked files.
-- `staged` → `git diff --cached`.
-- A branch → `git diff <default-branch>...<branch>`. The default branch is
-  `git symbolic-ref --short refs/remotes/origin/HEAD`, falling back to `main` or `master`.
-- A commit or range → `git show <commit>` / `git diff <range>`.
-- `PR <n>` → `gh pr diff <n>` and `gh pr view <n>`. If `gh` isn't available, ask for a
-  branch instead.
+Get the facts with `node "${CLAUDE_PLUGIN_ROOT}/scripts/diffmap.js" facts <target>`. The
+target is empty for uncommitted changes, or `staged`, a branch, a commit, or a range.
+For `PR <n>`, run `gh pr diff <n> | node "${CLAUDE_PLUGIN_ROOT}/scripts/diffmap.js" facts --stdin "PR <n>"`
+and `gh pr view <n>`. If `gh` isn't available, ask for a branch instead.
 
-Without a git repo, ask the learner which files to look at, and run steps 2-6 on those.
-If there's no diff, say so and stop.
+If the facts report "not a git repository": in map mode, say a map needs a git diff and
+stop; otherwise ask which files to look at, and run the remaining steps on those
+without a map. For any other `error`, show it and ask for a valid target. If there are no
+files, say so and stop.
 
-Leave lockfiles and generated, vendored, minified or binary files out of the reading
-(list them under coverage in step 5). If more than ~1500 changed lines remain, ask the
-learner to narrow it down (a path or a commit) before going on. Read the remaining diff,
-and enough surrounding code to judge it yourself.
+The facts already leave out lockfiles and generated files (`excluded`). If more than
+~1500 changed lines remain, ask the learner to narrow it down before going on: a commit,
+a range, or paths (`facts <target> -- <path>...`). Read the diff with the command matching the facts' `target`: `git diff HEAD`
+plus the untracked files, `git diff --cached`, `git diff <base>...<branch>`,
+`git show <commit>`, or the `gh pr diff` output. Read enough surrounding code to judge it
+yourself.
 
 ## 2. Learner predicts (from the outline only)
 
-Show only the file list with lines added and removed (`--stat`), plus the PR title or
-task if known. Ask:
+Show only the file list with lines added and removed, grouped by module, plus the PR
+title or task if known. Ask:
 - What do you think this change does?
 - Which file would you read first, and why?
 - What's the one thing most likely to be wrong?
 
-## 3. Rank and send them in
+They can also sketch it in a line or two: "orders/api now calls payments".
+
+In map mode, ask one line instead: what does this change do, and which part now talks to
+which? Skipping follows skill-rules rule 4. If they skipped, after the map ask which box
+they would read first and why.
+
+## 3. Show the map
+
+Build the change map, plus the structure view when `hints.structureView` is true, and
+write and render it as described in `diff-map.md` (Rendering), using
+`node "${CLAUDE_PLUGIN_ROOT}/scripts/diffmap.js" render`. Under it in the chat, list the
+evidence for each arrow (file:line) in one short line each.
+
+Then ask the learner first: **what does the map show that you didn't predict, and what
+did you expect that isn't there?** Confirm or correct their answer before adding your
+own observations. Offer the flow view once if the diff changes one request or job path
+end to end.
+
+After they answer, use `hints.codeWithoutTestChange` to point out changed code with no
+matching test change, as a question ("is `<file>` covered elsewhere?"), not a verdict.
+
+**Map mode stops here.** Offer the full review (`/se-mentor:understand-diff <target>`)
+in one line, and write a two-bullet `diff` journal entry: map mode, and whether the
+prediction was a hit, partly right, or skipped.
+
+## 4. Rank and send them in
 
 Rank the changed spots by risk: changed contracts (signatures, schemas, API shapes,
 config), error handling and failure paths, security (input, authz, secrets),
-concurrency and state, data migrations, then tests, then everything else. Pick the top
-2-3. For each, give a location and one specific question ("in `<file>:<lines>`: what
-happens if the list is empty?"). Then wait while they read.
+concurrency and state, data migrations, then tests, then everything else. The map's
+colours should already point the same way. Pick the top 2-3. For each, give a location
+and one specific question ("in `<file>:<lines>`: what happens if the list is empty?").
+Then wait while they read.
 
-## 4. Check their answers
+## 5. Check their answers
 
 Confirm or correct each answer against the code, with file:line. When they're wrong,
 point to the line that shows it and let them try once more. If the second try is still
 wrong, explain it plainly.
 
-## 5. Explain it back
+## 6. Explain it back
 
 Ask for the whole change in 3-4 sentences: what it does, why it's shaped that way, and
 what could break. Compare it with their prediction from step 2 and name what changed in
@@ -80,10 +109,12 @@ Then be honest about coverage: list the parts they haven't read (including exclu
 files), each with your one-line risk judgement (e.g. "`<file>`: rename only, low risk").
 The learner decides whether that is enough.
 
-## 6. Decide and record
+## 7. Decide and record
 
 - Ask for a verdict: accept, accept with changes (which?), or reject. If the agent wrote
   the diff, make the changes they ask for.
 - If they found a real problem, say so plainly. That's the skill working.
-- Record a `diff` journal entry with the prediction accuracy and the questions answered
-  correctly out of asked. Add review items for real gaps (at most 2).
+- Record a `diff` journal entry with the prediction accuracy (including what the map
+  showed that they missed, as a concept such as "missed a new auth dependency", with no
+  file, module or function names) and the questions answered correctly out of asked. Add review
+  items for real gaps (at most 2).
