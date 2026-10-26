@@ -1,0 +1,12 @@
+{
+  "name": "se-learning",
+  "owner": { "name": "Vetle Olavesen" },
+  "description": "Learning workflows for software engineers who code with agents.",
+  "plugins": [
+    {
+      "name": "se-mentor",
+      "source": "./plugins/se-mentor",
+      "description": "A configurable mentor that keeps you in the driver's seat while coding with agents."
+    }
+  ]
+}

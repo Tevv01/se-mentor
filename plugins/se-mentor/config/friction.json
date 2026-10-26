@@ -1,0 +1,55 @@
+{
+  "defaultLevel": "standard",
+  "params": {
+    "diffTeachbackMinLines": 60
+  },
+  "modulePromptsPerTask": {
+    "off": 0,
+    "light": 1,
+    "standard": 1,
+    "strict": 2
+  },
+  "checks": {
+    "plan-first": {
+      "summary": "You outline the approach before the agent writes non-trivial code.",
+      "instruction": "Before writing non-trivial code (a new feature, a refactor, anything beyond a small fix), ask the user to outline their approach in a few lines. Critique it and refine it together, then implement."
+    },
+    "predict-first": {
+      "summary": "You predict what unfamiliar code or a diff does before it is explained.",
+      "instruction": "Before explaining unfamiliar code or a diff, ask the user to predict what it does, what it changes, and what could break. Then explain, explicitly confirming or correcting each part of their prediction."
+    },
+    "diff-teachback": {
+      "summary": "After a large diff, you explain it back; the agent points out where to read closely.",
+      "instruction": "After producing a diff of {diffTeachbackMinLines}+ changed lines, name the 2-3 spots that most deserve careful reading and why, then ask the user to explain the change back in their own words. Close any gaps before moving on."
+    },
+    "hand-written": {
+      "summary": "The agent leaves the most instructive piece as TODO(you) for you to write.",
+      "instruction": "When implementing, leave the single most instructive piece (core logic, a tricky condition, or a key test) as a TODO(you) for the user to write, with a hint of what it must do. Review what they write before continuing."
+    },
+    "session-retro": {
+      "summary": "At wrap-up, a 3-question retro is logged to your journal.",
+      "instruction": "When the user signals they are wrapping up, run a short retro (/se-mentor:retro does it): what did you learn, what was confusing, what would you do differently. Record it as a retro journal entry."
+    }
+  },
+  "levels": {
+    "off": {},
+    "light": {
+      "plan-first": "nudge",
+      "predict-first": "nudge",
+      "diff-teachback": "nudge"
+    },
+    "standard": {
+      "plan-first": "require",
+      "predict-first": "nudge",
+      "diff-teachback": "require",
+      "session-retro": "nudge"
+    },
+    "strict": {
+      "plan-first": "require",
+      "predict-first": "require",
+      "diff-teachback": "require",
+      "hand-written": "require",
+      "session-retro": "require"
+    }
+  }
+}

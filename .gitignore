@@ -1,0 +1,13 @@
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Local Claude Code settings
+.claude/settings.local.json
+
+# Temp files from mentor.js atomic writes
+*.tmp
+
+node_modules/
