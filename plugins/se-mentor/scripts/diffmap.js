@@ -5,7 +5,8 @@
 //   facts [target] [-- <path>...]
 //                      JSON facts about a diff. target: empty (uncommitted changes),
 //                      staged, <branch>, <commit>, <a>..<b> or <a>...<b>. Paths after --
-//                      narrow it to those files or folders.
+//                      narrow it to those files or folders. `readWith` is the git command
+//                      that shows the same diff with context.
 //   facts --stdin      the same, for a unified diff piped in (e.g. from `gh pr diff`)
 //   render <file.mmd>  Wraps Mermaid sections in a self-contained HTML page next to the
 //                      file and opens it in the browser (unless SE_MENTOR_NO_OPEN is set)
@@ -144,9 +145,11 @@ function parseDiff(text) {
   return files;
 }
 
+// Returns { text, paths }: untracked files as a new-file diff, and their repo-root paths.
 function untrackedAsDiff(pathspec) {
   let out = '';
-  for (const p of git(['ls-files', '--others', '--exclude-standard', '-z', ...pathspec]).split('\0').filter(Boolean)) {
+  const paths = git(['ls-files', '--others', '--exclude-standard', '-z', ...pathspec]).split('\0').filter(Boolean);
+  for (const p of paths) {
     let body = '';
     try {
       const text = fs.readFileSync(p, 'utf8');
@@ -156,19 +159,29 @@ function untrackedAsDiff(pathspec) {
     } catch { body = ''; }
     out += `diff --git a/${p} b/${p}\nnew file mode 100644\n${body}`;
   }
-  return out;
+  return { text: out, paths };
 }
 
+// Remote branches come before local ones: a local main that was never pulled would
+// pull other people's commits into the diff.
 function defaultBranch() {
   try { return git(['symbolic-ref', '--short', 'refs/remotes/origin/HEAD']).trim(); } catch { /* no remote HEAD */ }
-  for (const b of ['main', 'master']) if (gitOk(['rev-parse', '--verify', '--quiet', b])) return b;
+  for (const b of ['origin/main', 'origin/master', 'main', 'master']) if (gitOk(['rev-parse', '--verify', '--quiet', b])) return b;
   return null;
 }
+
+// Quotes an argument for the git command the skill runs to read the diff.
+const shellArg = s => (/^[\w./@^~:=+-]+$/.test(s) ? s : `"${s.replace(/(["\\$`])/g, '\\$1')}"`);
+// The command that shows the learner the same diff the facts describe, run from the
+// folder facts was run from.
+const readCommand = (args, paths) => ['git', ...args, ...(paths.length ? ['--', ...paths] : [])].map(shellArg).join(' ');
 
 // Explicit prefixes override diff.noprefix / diff.mnemonicPrefix in the user's config.
 const DIFF_FLAGS = ['--no-color', '--no-ext-diff', '-U0', '--find-renames', '--src-prefix=a/', '--dst-prefix=b/'];
 
-// Returns { label, text } for a target, or { error }.
+// Returns { label, text, readWith, readAlso? } for a target, or { error }. readWith is
+// the git command that shows the same diff with context; readAlso lists untracked files,
+// which no git diff shows.
 function diffFor(target, paths) {
   if (!gitOk(['rev-parse', '--is-inside-work-tree'])) return { error: 'not a git repository' };
   // Paths are given relative to where the learner is; make them absolute before moving
@@ -179,21 +192,30 @@ function diffFor(target, paths) {
   if (target.startsWith('-')) return { error: `invalid target "${target}"` };
   const scope = paths.length ? ` in ${paths.join(', ')}` : '';
   const hasHead = gitOk(['rev-parse', '--verify', '--quiet', 'HEAD']);
+  // The same diff as the facts, with the learner's paths and full context.
+  const read = (label, args, factsArgs) => ({ label: label + scope, text: git([...factsArgs, ...ps]), readWith: readCommand(args, paths) });
   if (!target) {
-    const tracked = hasHead ? git(['diff', ...DIFF_FLAGS, 'HEAD', ...ps]) : git(['diff', ...DIFF_FLAGS, '--cached', ...ps]);
-    return { label: 'uncommitted changes' + scope, text: tracked + untrackedAsDiff(ps) };
+    // With no commits yet, everything git tracks is staged.
+    const args = hasHead ? ['diff', 'HEAD'] : ['diff', '--cached'];
+    const r = read('uncommitted changes', args, [args[0], ...DIFF_FLAGS, ...args.slice(1)]);
+    const untracked = untrackedAsDiff(ps);
+    // Absolute, because the skill reads them from wherever the learner is, not the repo root.
+    const readAlso = untracked.paths.map(p => fwd(path.resolve(p)));
+    return { ...r, text: r.text + untracked.text, ...(readAlso.length ? { readAlso } : {}) };
   }
-  if (target === 'staged') return { label: 'staged changes' + scope, text: git(['diff', ...DIFF_FLAGS, '--cached', ...ps]) };
-  if (target.includes('..')) return { label: target + scope, text: git(['diff', ...DIFF_FLAGS, target, ...ps]) };
+  if (target === 'staged') return read('staged changes', ['diff', '--cached'], ['diff', ...DIFF_FLAGS, '--cached']);
+  if (target.includes('..')) return read(target, ['diff', target], ['diff', ...DIFF_FLAGS, target]);
   if (gitOk(['show-ref', '--verify', '--quiet', `refs/heads/${target}`]) ||
       gitOk(['show-ref', '--verify', '--quiet', `refs/remotes/${target}`])) {
     const base = defaultBranch();
     if (!base) return { error: `no default branch found to compare ${target} against; pass <base>...${target}` };
-    return { label: `${base}...${target}` + scope, text: git(['diff', ...DIFF_FLAGS, `${base}...${target}`, ...ps]) };
+    return read(`${base}...${target}`, ['diff', `${base}...${target}`], ['diff', ...DIFF_FLAGS, `${base}...${target}`]);
   }
   if (gitOk(['rev-parse', '--verify', '--quiet', `${target}^{commit}`])) {
-    // A merge commit's own changes are its diff against the first parent.
-    return { label: `commit ${target}` + scope, text: git(['show', '--format=', '--diff-merges=first-parent', ...DIFF_FLAGS, target, ...ps]) };
+    // A merge commit's own changes are its diff against the first parent. Plain
+    // `git show` prints nothing for a clean merge, so the read command says so too.
+    return read(`commit ${target}`, ['show', '--diff-merges=first-parent', target],
+      ['show', '--format=', '--diff-merges=first-parent', ...DIFF_FLAGS, target]);
   }
   return { error: `unknown target "${target}": use staged, a branch, a commit, or <a>..<b>` };
 }
@@ -391,7 +413,8 @@ try {
   } else if (cmd === 'facts') {
     const sep = rest.indexOf('--');
     const d = diffFor((sep < 0 ? rest : rest.slice(0, sep)).join(' ').trim(), sep < 0 ? [] : rest.slice(sep + 1));
-    out(d.error ? { error: d.error, mapsDir: fwd(MAPS_DIR) } : facts(d.label, d.text));
+    out(d.error ? { error: d.error, mapsDir: fwd(MAPS_DIR) }
+      : { ...facts(d.label, d.text), readWith: d.readWith, ...(d.readAlso ? { readAlso: d.readAlso } : {}) });
   } else if (cmd === 'render' && rest[0]) {
     out(render(rest[0]));
   } else {

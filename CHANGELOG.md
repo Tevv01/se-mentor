@@ -3,6 +3,20 @@
 All notable changes to se-mentor are listed here. Versions follow
 `plugins/se-mentor/.claude-plugin/plugin.json`.
 
+## 0.3.1 - 2026-10-27
+
+- `/se-mentor:plan-with-me` and `/se-mentor:understand-diff` now use all your focus
+  modules, not just testing, owning-agent-features and reading-unfamiliar-code. Their
+  prompts are folded into the questions the skill already asks, within the module prompt
+  budget (new rule 7 in `reference/skill-rules.md`).
+- `understand-diff` now reads exactly the diff the map was drawn from. `diffmap.js facts`
+  returns a `readWith` command (and `readAlso` for untracked files), so a merge commit
+  shows its changes instead of nothing.
+- A branch is compared against `origin/main` or `origin/master` before a local `main`
+  that may be behind, so other people's commits no longer appear in your diff.
+- `mentor.js` errors now come back as JSON, a failed write no longer leaves a `.tmp` file
+  behind, and a very large journal no longer breaks `status`.
+
 ## 0.3.0 - 2026-10-26
 
 - Visual diff maps in `/se-mentor:understand-diff`. After your prediction, a map of the

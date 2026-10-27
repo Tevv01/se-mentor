@@ -32,6 +32,9 @@ Find the learner's level for `reading-unfamiliar-code` in `skillsMatrix` (assume
 is missing). Levels 1-2 get specific questions with a pointer to the exact lines. Levels
 3+ get the file and an open question.
 
+Outside map mode, use the focus modules (skill-rules rule 7). The natural places are the
+questions in step 4 and the explain-back in step 6.
+
 ## 1. Get the diff
 
 Get the facts with `node "${CLAUDE_PLUGIN_ROOT}/scripts/diffmap.js" facts <target>`. The
@@ -46,10 +49,10 @@ files, say so and stop.
 
 The facts already leave out lockfiles and generated files (`excluded`). If more than
 ~1500 changed lines remain, ask the learner to narrow it down before going on: a commit,
-a range, or paths (`facts <target> -- <path>...`). Read the diff with the command matching the facts' `target`: `git diff HEAD`
-plus the untracked files, `git diff --cached`, `git diff <base>...<branch>`,
-`git show <commit>`, or the `gh pr diff` output. Read enough surrounding code to judge it
-yourself.
+a range, or paths (`facts <target> -- <path>...`). Read the diff by running the facts'
+`readWith` command from the same folder, plus each file in `readAlso` (new untracked files)
+in full; for a PR, read the `gh pr diff` output. This is the same diff the facts and the
+map describe. Read enough surrounding code to judge it yourself.
 
 ## 2. Learner predicts (from the outline only)
 

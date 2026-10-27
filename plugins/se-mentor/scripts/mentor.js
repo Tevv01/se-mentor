@@ -53,8 +53,13 @@ function parseJsonFile(file) {
 function writeJsonAtomic(file, value) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const tmp = `${file}.${process.pid}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(value, null, 2) + '\n');
-  fs.renameSync(tmp, file);
+  try {
+    fs.writeFileSync(tmp, JSON.stringify(value, null, 2) + '\n');
+    fs.renameSync(tmp, file);
+  } catch (e) {
+    try { fs.unlinkSync(tmp); } catch { /* never created */ }
+    throw e;
+  }
 }
 
 function listDirs(dir) {
@@ -153,9 +158,10 @@ function recentJournal(maxLines) {
   const dir = path.join(STATE_DIR, 'journal');
   let files;
   try { files = fs.readdirSync(dir).filter(f => /^\d{4}-\d{2}\.md$/.test(f)).sort().reverse(); } catch { return ''; }
-  const lines = [];
+  let lines = [];
   for (const f of files) {
-    lines.unshift(...(readText(path.join(dir, f)) || '').trimEnd().split(/\r?\n/));
+    // concat, not unshift(...): spreading a huge file overflows the call stack.
+    lines = (readText(path.join(dir, f)) || '').trimEnd().split(/\r?\n/).slice(-maxLines).concat(lines);
     if (lines.length >= maxLines) break;
   }
   return lines.slice(-maxLines).join('\n');
@@ -394,5 +400,5 @@ try {
 } catch (err) {
   const msg = `se-mentor helper error: ${err && err.message}`;
   if (cmd === 'session-start') hookOutput(`${msg}. Tell the user once; se-mentor checks are off for this session.`);
-  else out(msg);
+  else out({ error: msg });
 }

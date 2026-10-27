@@ -1,7 +1,7 @@
 {
   "name": "se-mentor",
   "description": "A configurable mentor that keeps you in the driver's seat while coding with agents: pick your stack, friction level and focus modules.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "icon": "./.claude-plugin/icon.png",
   "author": { "name": "Vetle Olavesen" },
   "license": "MIT",

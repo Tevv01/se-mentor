@@ -26,6 +26,9 @@ Find the learner's level for `owning-agent-features` in `skillsMatrix` (assume 2
 is missing). Levels 1-2 get concrete scaffolds to correct. Levels 3+ get open questions
 and less help. If the feature is empty, ask for it.
 
+Use the focus modules (skill-rules rule 7) throughout. The natural places are the
+breakdown (Phase 2), the design decisions and the explain-backs.
+
 ## Phase 1: Understand the requirement
 
 1. Explore the repo enough to know where this feature would live. Keep your conclusions
@@ -41,8 +44,8 @@ and less help. If the feature is empty, ask for it.
 1. Ask for the breakdown: 3-7 steps, each with the files or areas they expect to touch
    and a done check (a test that passes, an endpoint that returns X). At levels 1-2,
    offer a skeleton with gaps to fill. At level 3+, give nothing until they've tried.
-2. If `testing` is a focus module, ask for the test cases of the riskiest step as part of
-   the plan.
+2. Fold in what the focus modules ask of a plan, as part of the breakdown: for example,
+   the test cases of the riskiest step, or where input is validated and who may call it.
 3. Critique it: missing steps, steps too large for one reviewable diff, wrong order,
    vague done checks, and where they guessed wrong about the code (show file:line).
 4. **Design decisions**: name the 2-4 decisions a reviewer would ask about (data shape,
