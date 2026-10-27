@@ -1,6 +1,7 @@
 ---
 name: go
 description: Go backend services (Go 1.26 and 1.27). net/http or chi/gin, database/sql with pgx or sqlc, the standard testing package, testify and testcontainers-go.
+detect: 'go.mod'
 ---
 
 # Go (net/http, database/sql, Go modules)

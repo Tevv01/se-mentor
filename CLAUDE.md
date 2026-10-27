@@ -20,7 +20,7 @@ plugins/se-mentor/
   reference/skill-rules.md          rules every skill follows (profile check, opt-out, confidentiality)
   reference/state-formats.md        journal, review-queue, skills-matrix and drill-file formats
   skills/<name>/SKILL.md            the engine: setup, extend, drill, plan-with-me,
-                                    understand-diff, review, retro (/se-mentor:<name>)
+                                    understand-diff, review, retro, status (/se-mentor:<name>)
   modules/<name>/MODULE.md          focus modules (content); _template/ is the contract
   stacks/<name>/STACK.md            stack packs (content); _template/ is the contract
 ```

@@ -24,6 +24,7 @@ for (const [kind, { file, headings }] of Object.entries(CONTRACTS)) {
     const front = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
     if (!front || !new RegExp(`^name:\\s*${name}\\s*$`, 'm').test(front[1])) problems.push(`${where}: frontmatter name must be "${name}"`);
     if (!front || !/^description:\s*\S/m.test(front[1])) problems.push(`${where}: frontmatter needs a description`);
+    if (kind === 'stacks' && (!front || !/^detect:\s*\S/m.test(front[1]))) problems.push(`${where}: frontmatter needs detect (files that mark a repo as this stack)`);
     const found = [...text.matchAll(/^## (.+?)\s*$/gm)].map(m => m[1]);
     if (found.join('|') !== headings.join('|')) problems.push(`${where}: sections must be exactly, in order: ${headings.join(', ')}`);
     if (kind === 'modules') {

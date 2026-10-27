@@ -1,6 +1,7 @@
 ---
 name: react-typescript
 description: React frontends in TypeScript. Vite or Next.js, a router, TanStack Query, forms, Vitest or Jest with React Testing Library, and Playwright.
+detect: 'package.json ~ "react"'
 ---
 
 # React and TypeScript (Vite, Next.js)

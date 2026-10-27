@@ -3,6 +3,18 @@
 All notable changes to se-mentor are listed here. Versions follow
 `plugins/se-mentor/.claude-plugin/plugin.json`.
 
+## 0.4.0 - 2026-10-27
+
+- Stack detection per repo. Each stack pack declares the files that mark its stack
+  (`detect:` in its frontmatter), and the session start picks the matching pack for the
+  repo you're in, so working on several projects with different stacks no longer mixes
+  their advice. When nothing matches, Claude infers the stack from your profile's list.
+  Custom packs need a `detect:` line to be detected; `/se-mentor:extend stack` asks for it.
+- New `/se-mentor:status` shows the settings that apply in the current repo: detected
+  stack, friction level and checks, focus modules with levels, reviews due and open
+  drills. Claude can also run it when you ask what se-mentor is set to.
+- `mentor.js status` reports the detected stacks under `project`.
+
 ## 0.3.1 - 2026-10-27
 
 - `/se-mentor:plan-with-me` and `/se-mentor:understand-diff` now use all your focus

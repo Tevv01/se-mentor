@@ -1,6 +1,7 @@
 ---
 name: python-web
 description: Python web backends. FastAPI with Pydantic and SQLAlchemy/Alembic, Django with Django REST Framework, pytest, uv or pip, ruff, mypy or pyright.
+detect: 'pyproject.toml, requirements.txt, Pipfile, setup.py, manage.py'
 ---
 
 # Python web (FastAPI, Django, DRF)

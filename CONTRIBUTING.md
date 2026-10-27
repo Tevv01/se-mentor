@@ -55,7 +55,10 @@ Copy [`stacks/_template/STACK.md`](plugins/se-mentor/stacks/_template/STACK.md) 
 `plugins/se-mentor/stacks/<name>/STACK.md`, or run `/se-mentor:extend stack <name>`.
 Practice repos must be real, actively maintained and well structured. Check that each one
 exists, and give each 2-3 concrete features to trace. Keep it free of anything specific to
-you or your employer.
+you or your employer. The `detect` frontmatter lists the files that mark a repo as this
+stack, so se-mentor can pick the pack for the repo the learner is in. Keep it specific
+enough not to match other stacks' repos: `package.json ~ "react"` requires the text, not
+just the file.
 
 ## Changing the engine
 

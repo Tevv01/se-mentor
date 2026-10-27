@@ -1,6 +1,7 @@
 ---
 name: jvm-spring
 description: Java and Kotlin backends on Spring Boot (3.x and 4.x). Spring MVC REST APIs, Spring Data JPA with Hibernate, Gradle or Maven, JUnit, Mockito or MockK, Testcontainers.
+detect: 'pom.xml, build.gradle, build.gradle.kts'
 ---
 
 # JVM and Spring Boot (Java, Kotlin, Spring Data JPA)

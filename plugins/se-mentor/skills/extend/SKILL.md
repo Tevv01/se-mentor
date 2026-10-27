@@ -35,11 +35,12 @@ Follow `${CLAUDE_PLUGIN_ROOT}/reference/skill-rules.md` (rules 3-6).
      open-source repos for the stack and verify that each exists (WebSearch or WebFetch).
      If you can't verify them, leave the section with a note saying so rather than
      guessing. Give each repo 2-3 concrete features to trace. In "Module notes", add a
-     subsection for each of the learner's focus modules.
+     subsection for each of the learner's focus modules. Ask which files mark a repo as
+     this stack (a project file, a lockfile, a dependency in a manifest) for `detect`.
 5. Show the learner the draft and refine it together until it matches how they work.
 6. Write it to `<stateDir>/modules/<name>/MODULE.md` or
-   `<stateDir>/stacks/<name>/STACK.md`, with `name` and `description` frontmatter as in
-   the template.
+   `<stateDir>/stacks/<name>/STACK.md`, with `name` and `description` frontmatter (and
+   `detect` for a stack) as in the template.
 7. Unless you were invoked from setup, offer to add it to `<stateDir>/profile.json`
    (`focus` with a weight, or `stacks`). A new focus module also needs a skills-matrix row:
    run the Calibration step from `${CLAUDE_PLUGIN_ROOT}/skills/setup/SKILL.md` for it.

@@ -1,6 +1,7 @@
 ---
 name: typescript-node
 description: TypeScript backends on Node.js. Express, Fastify or NestJS, Prisma, Drizzle or TypeORM, Vitest or Jest, npm or pnpm.
+detect: 'package.json ~ "express", package.json ~ "fastify", package.json ~ "@nestjs/core", package.json ~ "koa", package.json ~ "hono"'
 ---
 
 # TypeScript on Node.js (Express, Fastify, NestJS)

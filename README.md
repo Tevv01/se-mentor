@@ -78,6 +78,7 @@ how much friction you want. It writes your profile to `~/.se-mentor/`.
 | `/se-mentor:review [n]` | Spaced-repetition questions built from your own mistakes |
 | `/se-mentor:retro [week]` | A session retro, or a weekly review against your goals |
 | `/se-mentor:extend module\|stack <name>` | Write a new focus module or stack pack with you |
+| `/se-mentor:status` | The settings that apply in the repo you're in: detected stack, friction checks, focus modules and levels, reviews due. You can also just ask Claude what se-mentor is set to |
 
 Every step can be skipped. se-mentor says once why the step matters, then does what you
 ask and notes the skip in your journal.
@@ -119,6 +120,12 @@ plugin:
 
 For any other stack, run `/se-mentor:extend stack <name>` and it writes one with you,
 checking the practice repos it suggests.
+
+If you work on several projects, list all your stacks in your profile. At the start of
+each session se-mentor looks at the repo you're in (`*.csproj`, `pom.xml`, `go.mod`, a
+`package.json` with React, and so on) and tells Claude to use only the matching pack
+there. In a repo with a backend and a frontend, both packs apply. `/se-mentor:status`
+shows what it detected.
 
 **Friction level** sets how much se-mentor slows you down during normal work:
 

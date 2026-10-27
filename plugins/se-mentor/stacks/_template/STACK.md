@@ -1,6 +1,7 @@
 ---
 name: <kebab-case-name, e.g. typescript-node or dotnet-webapi>
 description: <One line: languages, runtime, main frameworks.>
+detect: '<files that mark a repo as this stack, comma-separated: *.csproj, go.mod. Add ~ "text" to also require the file to contain it: package.json ~ "react">'
 ---
 
 # <Stack title>

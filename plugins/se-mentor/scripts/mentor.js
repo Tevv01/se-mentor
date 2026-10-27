@@ -4,6 +4,7 @@
 // Commands:
 //   status                      JSON snapshot for skills (state, catalog, friction, reviews, open drills)
 //   session-start               SessionStart hook: injects the active profile as context
+//   summary                     Readable settings for the current repo (/se-mentor:status)
 //   init                        Creates the learner state directory layout
 //   now                         Prints the current time as ISO 8601 (start a drill timer)
 //   elapsed <iso>               Prints minutes since <iso>, rounded
@@ -24,6 +25,13 @@ const PROFILE_FILE = path.join(STATE_DIR, 'profile.json');
 const REVIEW_FILE = path.join(STATE_DIR, 'review-queue.json');
 const GYM_DIR = path.join(STATE_DIR, 'gym');
 const FORMATS_FILE = path.join(PLUGIN_ROOT, 'reference', 'state-formats.md');
+// The repo the learner is working in, for stack detection.
+const PROJECT_DIR = path.resolve(process.env.CLAUDE_PROJECT_DIR || process.cwd());
+// Stack detection looks only near the top of the repo, and skips folders that hold
+// dependencies or build output, so the session-start hook stays fast.
+const DETECT_DEPTH = 3;
+const DETECT_MAX_ENTRIES = 3000;
+const DETECT_SKIP = new Set(['node_modules', 'bin', 'obj', 'target', 'build', 'dist', 'out', 'vendor', 'venv', '__pycache__', 'coverage']);
 const MODES = ['off', 'nudge', 'require'];
 // Days until the next review, indexed by how many times in a row the item was recalled.
 const REVIEW_LADDER = [1, 3, 7, 16, 35, 90];
@@ -74,10 +82,10 @@ function localDate(offsetDays = 0) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-// Pulls `description:` out of a Markdown file's frontmatter.
-function describe(file) {
+// Pulls one `key:` line out of a Markdown file's frontmatter.
+function frontmatter(file, key) {
   const m = (readText(file) || '').match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  const d = m && m[1].match(/^description:\s*(.+)$/m);
+  const d = m && m[1].match(new RegExp(`^${key}:\\s*(.+)$`, 'm'));
   return d ? d[1].trim().replace(/^["']|["']$/g, '') : '';
 }
 
@@ -85,15 +93,67 @@ function describe(file) {
 // A custom entry shadows a built-in one with the same name. Names starting
 // with "_" are templates and never listed.
 function catalog(kind, fileName) {
-  const out = {};
+  const out = Object.create(null);
   for (const [origin, base] of [['built-in', PLUGIN_ROOT], ['custom', STATE_DIR]]) {
     for (const e of listDirs(path.join(base, kind))) {
       if (e.name.startsWith('_') || e.name.startsWith('.')) continue;
       const file = path.join(base, kind, e.name, fileName);
-      if (fs.existsSync(file)) out[e.name] = { origin, file: fwd(file), description: describe(file) };
+      if (!fs.existsSync(file)) continue;
+      const detect = frontmatter(file, 'detect');
+      out[e.name] = { origin, file: fwd(file), description: frontmatter(file, 'description'), ...(detect ? { detect } : {}) };
     }
   }
   return out;
+}
+
+// Files near the top of the project, breadth first, so the root's files are seen
+// before the entry cap is reached.
+function projectFiles(root) {
+  const files = [];
+  if (root === path.resolve(os.homedir())) return files; // not a project
+  let queue = [root];
+  let seen = 0;
+  for (let depth = 0; depth <= DETECT_DEPTH && queue.length; depth++) {
+    const next = [];
+    for (const dir of queue) {
+      let entries;
+      try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { continue; }
+      for (const e of entries) {
+        if (++seen > DETECT_MAX_ENTRIES) return files;
+        if (e.name.startsWith('.')) continue;
+        const p = path.join(dir, e.name);
+        if (e.isFile()) files.push(p);
+        else if (e.isDirectory() && !DETECT_SKIP.has(e.name)) next.push(p);
+      }
+    }
+    queue = next;
+  }
+  return files;
+}
+
+const globRe = glob => new RegExp('^' + glob.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.') + '$', 'i');
+
+// Stacks whose `detect` frontmatter matches a file in the project. Rules are
+// comma-separated file names or globs ("*.csproj, go.mod"); `file ~ text` also requires
+// the file to contain the text ('package.json ~ "react"').
+function detectStacks(stacks, root = PROJECT_DIR) {
+  const files = projectFiles(root);
+  const texts = new Map();
+  const contains = (f, text) => {
+    if (!texts.has(f)) texts.set(f, readText(f) || '');
+    return texts.get(f).includes(text);
+  };
+  const found = [];
+  for (const [name, s] of Object.entries(stacks)) {
+    for (const rule of (s.detect || '').split(',').map(r => r.trim()).filter(Boolean)) {
+      const i = rule.indexOf('~');
+      const re = globRe((i < 0 ? rule : rule.slice(0, i)).trim());
+      const text = i < 0 ? '' : rule.slice(i + 1).trim();
+      const hit = files.find(f => re.test(path.basename(f)) && (!text || contains(f, text)));
+      if (hit) { found.push({ name, file: s.file, found: fwd(path.relative(root, hit)) }); break; }
+    }
+  }
+  return found;
 }
 
 // Coerces a hand-edited profile into the shape the rest of the script expects,
@@ -253,9 +313,20 @@ function openDrills() {
     .filter(Boolean);
 }
 
+// { module: { level, source } } from the skills-matrix table.
+function matrixLevels() {
+  const out = Object.create(null);
+  for (const line of (readText(path.join(STATE_DIR, 'skills-matrix.md')) || '').split(/\r?\n/)) {
+    const cells = line.split('|').map(c => c.trim());
+    if (cells.length > 4 && /^\d/.test(cells[2])) out[cells[1]] = { level: cells[2], source: cells[3] };
+  }
+  return out;
+}
+
 function status() {
   const { profile, error } = loadProfile();
   const cfg = frictionConfig();
+  const stacks = catalog('stacks', 'STACK.md');
   return {
     today: localDate(),
     stateDir: fwd(STATE_DIR),
@@ -271,7 +342,8 @@ function status() {
     review: reviewCounts(),
     openDrills: openDrills(),
     modules: catalog('modules', 'MODULE.md'),
-    stacks: catalog('stacks', 'STACK.md'),
+    stacks,
+    project: { dir: fwd(PROJECT_DIR), stacks: detectStacks(stacks) },
     templates: {
       module: fwd(path.join(PLUGIN_ROOT, 'modules', '_template', 'MODULE.md')),
       stack: fwd(path.join(PLUGIN_ROOT, 'stacks', '_template', 'STACK.md')),
@@ -313,8 +385,16 @@ function sessionContext() {
   const resolve = (names, cat, label, fix) => names.map(n =>
     cat[n] ? `- ${label(n)} -> ${cat[n].file}` : `- ${label(n)} -> MISSING (tell the user once; ${fix(n)} can fix it)`);
 
-  if (profile.stacks.length) {
-    section('Stacks (read the pack when stack-specific advice or practice repos are needed):',
+  const detected = detectStacks(stacks);
+  if (detected.length) {
+    const others = profile.stacks.filter(n => !detected.some(d => d.name === n));
+    section('Stack for this repo, detected from its files (read the pack when stack-specific advice or practice repos are needed):',
+      ...detected.map(d => `- ${d.name} -> ${d.file} (found ${d.found})`),
+      ...(detected.length > 1 ? ['Several stacks matched: use the pack for the part of the repo you are working in.'] : []),
+      ...(others.length ? [`The learner's other stacks (${others.join(', ')}) don't apply to this repo.`] : []));
+  } else if (profile.stacks.length) {
+    section('Stacks the learner uses. None was detected in this repo: infer from the code which one applies, ' +
+      'if any, and use only that pack (read it when stack-specific advice or practice repos are needed):',
       ...resolve(profile.stacks, stacks, n => n, n => `/se-mentor:extend stack ${n}`));
   } else {
     section('Stacks: none set. Infer the stack from the current repo. ' +
@@ -363,6 +443,39 @@ function sessionContext() {
   return lines.join('\n');
 }
 
+// What /se-mentor:status shows: the settings that apply in the current repo.
+function summary() {
+  const { profile, error } = loadProfile();
+  if (error) return `se-mentor cannot read your profile: ${error}. Run /se-mentor:setup to repair it.`;
+  if (!profile) return 'se-mentor is not set up yet. Run /se-mentor:setup to create your profile.';
+
+  const stacks = catalog('stacks', 'STACK.md');
+  const detected = detectStacks(stacks);
+  const others = profile.stacks.filter(n => !detected.some(d => d.name === n));
+  const { level, checks, modulePromptsPerTask } = effectiveFriction(profile);
+  const levels = matrixLevels();
+  const review = reviewCounts();
+  const drills = openDrills();
+  const lines = ['## se-mentor status', '', `**This repo** (${fwd(PROJECT_DIR)})`];
+
+  if (detected.length) {
+    lines.push(...detected.map(d => `- Stack: ${d.name} (found ${d.found})`));
+    if (others.length) lines.push(`- Your other stacks (${others.join(', ')}) are not used here`);
+  } else {
+    lines.push(`- Stack: none detected${profile.stacks.length ? `; the agent infers it from the code, choosing from your stacks (${profile.stacks.join(', ')})` : ''}`);
+  }
+  lines.push('', `**Friction: ${level}** (${modulePromptsPerTask} focus-module prompt(s) per task)`,
+    ...checks.map(c => `- ${c.id}: ${c.mode}`));
+  lines.push('', '**Focus modules**', ...(profile.focus.length ? profile.focus.map(f => {
+    const l = Object.hasOwn(levels, f.module) ? levels[f.module] : null;
+    return `- ${f.module}: weight ${f.weight}, ${l ? `level ${l.level} (${l.source})` : 'no level yet'}`;
+  }) : ['- none']));
+  lines.push('', `**Reviews:** ${review.error ? review.error : `${review.due} due, ${review.total} in the queue`}`);
+  lines.push(`**Open drills:** ${drills.length ? drills.map(d => `${d.module} / ${d.drill}`).join('; ') : 'none'}`);
+  lines.push(`**Learner state:** ${fwd(STATE_DIR)}`);
+  return lines.join('\n');
+}
+
 function init() {
   for (const sub of ['', 'journal', 'modules', 'stacks', 'gym']) fs.mkdirSync(path.join(STATE_DIR, sub), { recursive: true });
   // Learners may version the state dir; drill scratch projects don't belong in it.
@@ -382,6 +495,8 @@ try {
     out(status());
   } else if (cmd === 'session-start') {
     hookOutput(sessionContext());
+  } else if (cmd === 'summary') {
+    out(summary());
   } else if (cmd === 'init') {
     out(init());
   } else if (cmd === 'now') {
@@ -395,7 +510,7 @@ try {
   } else if (cmd === 'review-grade') {
     out(reviewGrade(a1, a2));
   } else {
-    out('usage: mentor.js status | session-start | init | now | elapsed <iso> | review-due [limit] | review-grade <id> <again|good|easy>');
+    out('usage: mentor.js status | session-start | summary | init | now | elapsed <iso> | review-due [limit] | review-grade <id> <again|good|easy>');
   }
 } catch (err) {
   const msg = `se-mentor helper error: ${err && err.message}`;

@@ -1,6 +1,7 @@
 ---
 name: dotnet
 description: C# on modern .NET (8 and 10). ASP.NET Core Web APIs, Entity Framework Core, xUnit or NUnit.
+detect: '*.sln, *.slnx, *.csproj, *.fsproj'
 ---
 
 # .NET (C#, ASP.NET Core, EF Core)
